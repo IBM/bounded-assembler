@@ -1,0 +1,61 @@
+import Test
+
+1. axiom 1
+
+1prime. axiom 1 [x / a]
+
+1primeprime. =Symm 1prime | {(= a (+ a (0)))}
+
+1a. forAllI 1 x x |
+   {(ForAll x (= (+ x (0))
+      x))}
+
+1succ. forAllE 1a {(S a)} | {(= (+ (S a) (0)) (S a))}
+
+2. axiom 1 [ x / a ]
+
+3. axiom 2
+
+3a. forAllI 3 x x | {(ForAll x (= (+ x (S y)) (S (+ x y))))}
+
+3b. forAllE 3a {(0)} |  {(= (+ (0) (S y)) (S (+ (0) y)))}
+
+3c. forAllI 3b y y | {(ForAll y (= (+ (0) (S y)) (S (+ (0) y))))}
+
+3d. forAllE 3c {a} |  {(= (+ (0) (S a)) (S (+ (0) a)))}
+
+3e. mark 3d {(= (+ (0) (S a)) (S /1(+ (0) a)))}
+
+4. assume {(= (+ a (0)) (+ (0) a))}
+
+4a. =Subst 4 3e 1 |
+   {(= (+ (0) (S a))
+      (S (+ a (0)))) }
+
+5. mark 4a {(= (+ (0) (S a))
+      (S /2(+ a (0))))}
+
+6. =Subst Test 5 2 |
+   {(= (+ (0) (S a))
+      (S a))}
+
+7. =Symm 6 | {(=  (S a) (+ (0) (S a)) )}
+
+8. =Trans 1succ 7 | {(= (+ (S a) (0)) (+ (0) (S a)))}
+
+9. impliesI 4 8 |
+   {(-> (= (+ a (0)) (+ (0) a))
+             (= (+ (S a) (0)) (+ (0) (S a))))}
+
+9_universal. forAllI 9 a a | {(ForAll a (-> (= (+ a (0)) (+ (0) a))
+             (= (+ (S a) (0)) (+ (0) (S a)))))}
+
+base_case. =Refl {(+ (0) (0))} | {(= (+ (0) (0)) (+ (0) (0)))}
+
+10. induct  base_case 9_universal |  {
+                                       (ForAll a (= (+ a (0)) (+ (0) a)))
+                                     }
+
+
+
+       

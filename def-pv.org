@@ -1,0 +1,208 @@
+* Introduction
+This document defines a first-order theory of bounded arithmetic called $T^0_2$.  We begin by specifying a first-order language, starting with a list of the symbols in that language and their intended interpretations.  The logical connectives are $\{\neg , \land , \lor, \rightarrow \}$ to be interpreted as negation, conjunction, disjunction, and implication respectively.  The quantifiers are $\{\exists , \forall \}$ to be interpreted as "there exists an $x$" and "for all $x$".  The non-logical predicates are $\{ = , < , \leq \}$ to be interpreted as equality, "less than", and "less than or equal to" over the natural numbers.  The non-logical constants are $\{0 , 1 , 2\}$ to be interpreted as the numbers 0, 1, and 2 respectively.  The unary non-logical function symbols are $\{S, \ell, C_0, C_1\}$ to be interpreted as successor, $\lceil \log_2(x + 1) \rceil$, $2x$, and $2x + 1$.  The binary non-logical function symbols are $\{+ , \cdot , \# , >>  \}$ to be interpreted as addition, multiplication, smash $x \# y = 2^{\ell(x) \cdot \ell(y)}$ and shift-right $x >> y = \lfloor \frac{x}{2^y}\rfloor$.
+
+* Syntax
+First define some auxiliary sets of terminals using eBNF notation.
+
+#+begin_src eBNF
+pad := '_' | '-'
+  
+digit ::= '0' .. '9'
+  
+alpha ::= 'a' .. 'z' | 'A' .. 'Z'
+#+end_src
+
+Symbols enclosed by '<' and '>' are non-terminal. The <id> strings will be used to identify sub-terms and sub-formulas of the language.  The var strings are the allowed names for variables.
+
+#+begin_src eBNF
+<id> ::= ( alpha | digit)+ ( alpha | digit | pad )*
+
+var ::= 'a' .. 'z'
+#+end_src
+
+We now begin to specify the syntax of $T^0_2$ starting with \emph{terms} --- expressions that evaluate to an object.
+
+#+begin_src eBNF
+function0 ::= '0' | '1' | '2'
+
+function1 := 'S' | 'Len' | 'C_0' | 'C_1'
+  
+function2 := '+' | '*' | '#' | '>>'
+
+<term> := <var>
+  | '(' <function0> ')'
+  | '(' <function1> <term> ')'
+  | '(' <function2> <term> <term> ')'
+#+end_src
+
+For example, the intended evaluation of (* (S 1) (S 2)) is 6.  Notice there is no symbol for 6 but $T^0_2$ can refer to it using both the given expression and (S(S(S(S(S(S 0)))))).
+
+To write down proofs in $T^0_2$, we must refer to sub-terms.  /Marked terms/ use identifiers to name part of a term.  They are defined recursively using terms according to the following grammar.  In subsequent blocks of eBNF, comments are delimited by /* ... */ .
+
+#+begin_src eBNF
+<m-term> := '/' <id> <term>
+  | '(' <function1> <m-term> ')'
+  | '(' <function2> <term> <m-term> ')'
+  | '(' <function2> <m-term> <term> ')'
+  | '(' <function2> <m-term> <m-term> ')'
+  /* inner mark */
+  | '/' <id> '(' <function1> <m-term> ')'
+  | '/' <id> '(' <function2> <term> <m-term> ')'
+  | '/' <id> '(' <function2> <m-term> <term> ')'
+  | '/' <id> '(' <function2> <m-term> <m-term> ')'
+  /* outer mark */
+#+end_src
+
+For example, the marked term (* (S 1) /three(S 2)) uses the identifier three to refer to the sub-term (S 2).
+
+We continue to specify the syntax of $T^0_2$ by defining /formulas/ --- expressions that evaluate to True or False.
+
+#+begin_src eBNF
+connective1 := 'Not'
+  
+connective2 := 'And' | 'Or' | '->' | '<-->'
+  
+predicate := '=' | '<' | '<='
+
+quantifier := 'ForAll' | 'Exists'
+
+<formula> := 'True' | 'False'
+  | '(' predicate <term> <term> ')'
+  | '(' connective1 <formula> ')'
+  | '(' connective2 <formula> <formula> ')'
+  | '(' quantifier var <formula> ')'
+#+end_src
+
+For example, the formula (= 1 (S 0)) is intended to evaluate to True.
+
+To write down proofs in $T^0_2$ we must refer to sub-formulas.  /Marked formulas/ use identifiers to name part of a formula.  They are defined recursively using formulas according to the following grammar.
+
+#+begin_src eBNF
+<m-formula> := '(' predicate <term> <m-term> ')'
+  | '(' predicate <m-term> <term> ')'
+  | '(' predicate <m-term> <m-term> ')'
+  | '(' connective1 <m-formula> ')'
+  | '(' connective2 <formula> <m-formula> ')'
+  | '(' connective2 <m-formula> <formula> ')'
+  | '(' connective2 <m-formula> <m-formula> ')'
+  | '(' quantifier var <m-formula> ')'
+#+end_src
+
+The language of $T^0_2$ is the union of the sets <formula> and <m-formula>.  This completes our definition of the syntax of $T^0_2$.
+
+To write a sequence of $T^0_2$formulas, write an identifier, a period, whitespace, and then the formula followed by a newline.
+
+#+begin_src eBNF
+  <seq-formula> := ( <id> '.' ' '+ <formula> '\n' )+
+#+end_src
+
+* Semantics and Axioms
+$T^0_2$ is first-order logic with equality including the following axioms.
+
+#+begin_src seq-formula
+  1.  (= (+ x (0) ) x)
+  2.  (= (+ x (S y)) (S (+ x y)))
+  3.  (= (* x 0) (0))
+  4.  (= (* x (S y)) (+ (* x y) x))
+  5.  (<= 0 x)
+  6.  (<--> (<= (S y) x) (< y x))
+  7.  (= (>> x 0) x)
+  8.  (Or (= (>> x y) (* (2) (>> x (S y))))
+         (= (>> x y) (S (* (2) (>> x (S y))))))
+  9.  (= (Len (0)) (0))
+  10. (-> (Not (= x (0))) (= (Len x) (S (Len (>> x (1))))))
+  11. (= (# (0) (1)) (1))
+  12. (-> (Not (= x (0)))
+          (And
+            (= (# x (1)) (* (2) (# (>> x (1)) (1))))
+            (= (# y x)
+               (* (# y (1)) (# y (>> x (1)))))))
+#+end_src
+
+* Proofs
+
+A /deduction/ is a sequence of identified lines, many of which have a /concluding formula/, described by the grammar below. First, we describe some substrings of lines, starting with the syntax for substitutions and introducing axioms.
+
+#+begin_src eBNF
+<sub> := '[' var '/' var ']'
+         | '[' var '/' <term> ']'
+
+<axiom> := 'axiom' (<digit>)+ '|' <formula>
+           | 'axiom' (<digit>)+ <sub> '|' <formula>
+           | 'axiom' (<digit>)+ <sub> <sub> '|' <formula>
+#+end_src
+
+We define more substrings of lines for marking formulas, defining predicates, and introducing assumptions.
+
+#+begin_src eBNF
+<assump> := 'assume' '{' <formula> '}'
+
+<mark> := 'mark' <id> '{' <m-formula> '}'
+  
+<def-pred> := 'def' '{' <formula> '}' 'as' '(' <id> (var)+ ')'
+#+end_src
+
+Finally, the set of lines is defined as:
+
+#+begin_src eBNF
+<line> := <id> '.'
+  ( <axiom> | <assump> | <mark> | <def-pred> | <rule> ) '\n'  
+#+end_src
+
+All that remains is to specify the most important kind of line: the /rules of inference/. To do so, we adopt additional conventions for eBNF notation.
+1. If a line with identifier $i$ has a concluding formula, it appears after the '|' character at the end of the line.  Identifier nonterminals <id> will be used to refer to the concluding formula of previous lines.  We write <A @ id> to denote "the concluding formula A of the previous line with identifier $i$". Line identifiers must be unique. A is a meta-syntactic variable: it stands for a formula as a /parse tree/.
+2. If A and B are meta-syntactic variables that name (marked) formulas introduced by the notation <A @ id> and <B @ id> and C(X,Y) is the /partial/ parse tree of a <formula> with meta-syntactic variables X and Y at the leaves, then we may write < C(A,B) : formula> to denote the results of substituting A and B into C.
+
+
+#+begin_src eBNF
+<andI> := 'andI' <A @ id > <B @ id> '|' < (And A B) : formula>
+
+<andE-left> := 'andE-left' <(And A B) @ id > '|' <A : formula>
+
+<andE-right> := 'andE-right' <(And A B) @ id > '|' <B : formula>
+#+end_src
+
+
+#+begin_src eBNF
+<orI> := 'orI <A @ id> '{' <B : formula> '}' '|' <(Or A B) : formula>
+       | 'orI <A @ id> <B @ id> '|' <(Or A B) : formula>
+
+<orE> := 'orE' <(Or A B) @ id> '{' <A @ id : assump> '}' <C @ id>
+                               '{' <B @ id : assump> '}' <C @ id> '|' <C : formula>
+#+end_src
+
+The Or-Elimination rule <orE> requires additional exposition: the identified appearences of A and enclosed in braces '{' and '}' must be lines whose content is an /assumption/ of A or B (respectively). The semantics capture reasoning by cases: if we have derived the formula (Or A B) on a previous line and can derive C by assuming A or assuming B, then we can derive C. The Or-Elimination rule *discharges* the named assumptions.
+
+#+begin_src eBNF
+<impliesI> := 'impliesI' '{' <A @ id: assump> '}' <B @ id> '|' <(-> A B) : formula>
+
+<impliesE> := 'impliesI' <A @ id> <(-> A B) @ id> '|' <B : formula>
+#+end_src
+
+The impliedI rule *discharges* the named assumption.
+
+#+begin_src eBNF
+<negI> := 'negI' '{' <A @ id> '}' <False @ id> '|' <(Not A) : formula>
+
+<negE> := 'negE' <A @ id> <(Not A) @ id> '|' 'False'
+
+<botJ> := 'botJ' <False @ id> <D @ id : def> '|' <D : formula>
+        | 'botJ' <id>  '{' <D : formula> '}' '|' <D : formula>
+
+<botK> := 'botK' '{' <(Not A) @ id> '}' <False @ id> '|' <A : formula>
+#+end_src
+
+The negI and botK rules *discharge* their named assumptions.
+
+*TODO* SKIPPED ALL THE QUANTIFIER RULES BECAUSE OF EIGENVARIABLES WILL WRITE THEM ASAP
+
+#+begin_src eBNF
+<eqRefl> := 'eqRefl' <term> '|' <formula>
+
+<eqSymm> := 'eqSymm' <id> '|' <formula>
+
+<eqTrans> := 'eqTrans' <id> <id> '|' <formula>
+
+<eqSub> := 'eqSub' <id> <id> <id> '|' <formula>
+#+end_src
+

@@ -1,0 +1,7 @@
+1. axiom 1
+
+1a. axiom 5
+
+2. andI 1 1a | {
+                  (And (= (+ x (0)) x) (<= (0) x))
+               }

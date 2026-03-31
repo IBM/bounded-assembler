@@ -1,0 +1,10 @@
+name = "parser_alpha"
+version = "0.1.0"
+defaultTargets = ["parser_alpha"]
+
+[[lean_lib]]
+name = "ParserAlpha"
+
+[[lean_exe]]
+name = "parser_alpha"
+root = "Main"

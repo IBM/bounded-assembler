@@ -1,0 +1,5 @@
+1. axiom 1
+
+1prime. axiom 1 [x / a]
+
+1primeprime. =Symm 1prime | {(= a (+ a (0)))}
